@@ -39,17 +39,18 @@ class PropertyInventory(JSONBaseModel):
 class Person(JSONBaseModel):
     first_name = models.CharField(max_length=256, unique=False, null=False, blank=False)
     last_name = models.CharField(max_length=256, unique=False, null=False, blank=False)
-    gender = models.CharField(max_length=16, unique=False, null=False, blank=False)
-    date_of_birth = models.DateTimeField(default=timezone.now, verbose_name=u'生日', blank=True)
-    join_date = models.DateTimeField(default=timezone.now, verbose_name=u'进入日期', blank=True)
+    gender = models.CharField(choices=[("male","male"),("female","female")], max_length=16, unique=False, null=False, blank=False)
+    date_of_birth = models.DateField(default=timezone.now, verbose_name=u'生日', blank=True)
+    join_date = models.DateField(default=timezone.now, verbose_name=u'进入日期', blank=True)
     parent_mother = models.IntegerField(default=0, null=False, blank=True)
     parent_father = models.IntegerField(default=0, null=False, blank=True)
     dead = models.BooleanField(default=False, null=False, verbose_name=u'是否死亡')
-    date_of_dead = models.DateTimeField(null=True, verbose_name=u'死亡日期', blank=True)
+    date_of_dead = models.DateField(null=True, verbose_name=u'死亡日期', blank=True)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
+
 class CurrentDate(JSONBaseModel):
-    current_date = models.DateTimeField(default=timezone.now, verbose_name=u'进行到的日期', blank=True)
+    current_date = models.DateField(default=timezone.now, verbose_name=u'进行到的日期', blank=True)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
     @classmethod

@@ -173,3 +173,6 @@ CACHES = {
 
     }
 }
+
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_BROKER_URL = 'redis://:Bluestackscn2016@60.205.94.60:6379/0'

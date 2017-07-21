@@ -15,6 +15,7 @@ class JSONBaseModel(models.Model):
     """
     带json序列化的基础Model
     """
+
     def toJSON(self):
         """
         序列化成 dict类型

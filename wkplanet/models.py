@@ -9,6 +9,31 @@ from django.utils import timezone
 from django.core.cache import cache
 
 
+class PropertyType(JSONBaseModel):
+    name = models.CharField(max_length=128, unique=True, null=False, blank=False)
+    uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+
+class RealEstate(JSONBaseModel):
+    work_hours = models.IntegerField(default=0, null=False, blank=False)
+    belong = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'所属人')
+    uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+
+class Skill(JSONBaseModel):
+    name = models.CharField(max_length=128, unique=True, null=False, blank=False)
+    uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+class SkillPerson(JSONBaseModel):
+    skill_id = models.IntegerField(default=0, null=False, blank=False)
+    person_id = models.IntegerField(default=0, null=False, blank=False)
+    uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+class PropertyInventory(JSONBaseModel):
+    person_id = models.IntegerField(default=0, null=False, blank=False)
+    property_id = models.IntegerField(default=0, null=False, blank=False)
+    inventory = models.FloatField(default=0.0, null=False, blank=False)
+    uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
 
 class Person(JSONBaseModel):
@@ -22,7 +47,6 @@ class Person(JSONBaseModel):
     dead = models.BooleanField(default=False, null=False, verbose_name=u'是否死亡')
     date_of_dead = models.DateTimeField(null=True, verbose_name=u'死亡日期', blank=True)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
-
 
 class CurrentDate(JSONBaseModel):
     current_date = models.DateTimeField(default=timezone.now, verbose_name=u'进行到的日期', blank=True)
@@ -44,8 +68,7 @@ class CurrentDate(JSONBaseModel):
         if not cls.objects.all().exists():
             raise Exception("current date no data")
         try:
-            cls.objects.update({"current_date":current})
+            cls.objects.update({"current_date": current})
             cache.set("get_current_date", current, 3600)
         except Exception, e:
             print e
-

@@ -165,9 +165,11 @@ CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": CACHES_LOCATION,
+        "KEY_PREFIX" : "wkp_",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "PASSWORD": "Bluestackscn2016"
         }
+
     }
 }

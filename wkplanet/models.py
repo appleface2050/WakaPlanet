@@ -73,3 +73,5 @@ class CurrentDate(JSONBaseModel):
             cache.set("get_current_date", current, 3600)
         except Exception, e:
             print e
+
+

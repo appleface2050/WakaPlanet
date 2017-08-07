@@ -24,3 +24,6 @@ class Process(object):
 if __name__ == '__main__':
     a = Process()
     a.next_day()
+
+
+

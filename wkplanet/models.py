@@ -3,11 +3,17 @@ from __future__ import unicode_literals
 
 from django.db import models
 import datetime
+import random
 # Create your models here.
 from util.basemodel import JSONBaseModel
 from django.utils import timezone
 from django.core.cache import cache
 
+from util.waka import name_generator
+
+"""
+
+"""
 
 class PropertyType(JSONBaseModel):
     name = models.CharField(max_length=128, unique=True, null=False, blank=False)
@@ -48,10 +54,36 @@ class Person(JSONBaseModel):
     date_of_dead = models.DateField(null=True, verbose_name=u'死亡日期', blank=True)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
+    @classmethod
+    def create_a_origin_person(cls):
+        p = cls()
+        name_dict = name_generator()
+        p.first_name = name_dict.get("name")
+        p.last_name = name_dict.get("surname")
+        p.gender = name_dict.get("gender")
+        p.date_of_birth = CurrentDate.get_current_date() - datetime.timedelta(days=random.randint(365*18, 365*60))
+        p.join_date = CurrentDate.get_current_date()
+        try:
+            p.save()
+            print name_dict
+        except Exception, e:
+            print e
+
 
 class CurrentDate(JSONBaseModel):
     current_date = models.DateField(default=timezone.now, verbose_name=u'进行到的日期', blank=True)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+    @classmethod
+    def set_next_day(cls):
+        today = cls.objects.all().order_by("-uptime")[0]
+        today.current_date += datetime.timedelta(days=1)
+        try:
+            today.save()
+            cache.set("get_current_date",  today.current_date, 3600)
+        except Exception, e:
+            print e
+            print today
 
     @classmethod
     def get_current_date(cls):

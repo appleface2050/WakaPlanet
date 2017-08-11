@@ -97,14 +97,19 @@ class RealEstate(JSONBaseModel):
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
 
-class Skill(JSONBaseModel):
-    name = models.CharField(max_length=128, unique=True, null=False, blank=False)
-    uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+class Skill(object):
+    groups = ["farming", "building", "music", "painting", "mining"]
+
+
+# class Skill(JSONBaseModel):
+#     name = models.CharField(max_length=128, unique=True, null=False, blank=False)
+#     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
 
 class SkillPerson(JSONBaseModel):
     skill_id = models.IntegerField(default=0, null=False, blank=False)
     person_id = models.IntegerField(default=0, null=False, blank=False)
+    exp = models.IntegerField(default=1000, null=False, blank=False)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
 
@@ -123,6 +128,10 @@ class Person(JSONBaseModel):
     dead = models.BooleanField(default=False, null=False, verbose_name=u'是否死亡')
     date_of_dead = models.DateField(null=True, verbose_name=u'死亡日期', blank=True)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+    @classmethod
+    def get_all_alive_person(cls):
+        return cls.objects.filter(dead=False)
 
     @classmethod
     def create_a_origin_person(cls):
@@ -176,3 +185,30 @@ class CurrentDate(JSONBaseModel):
             cache.set("get_current_date", current, 3600)
         except Exception, e:
             print e
+
+
+class Character(object):
+    """
+    性格
+    每个人都有这6个倾向，1-9倾向程度
+    """
+    groups = ["追求安全感", "追求财富", "追求家庭生活", "追求艺术", "追求技术", "追求娱乐"]
+
+
+class Desire(object):
+    """
+    愿望
+    """
+    # groups = ["farming", "building", "music", "painting", "mining"]
+    groups = ["提升主要技能", "学习一项新的娱乐技能", "提升主要娱乐技能", "提升farming", "提升building", "提升mining", "提升music", "提升painting",
+              # 技能提升
+              "升级房子", "创作music", "创作painting", "mining",  # 明确使用技能进行生产
+              "存储更多食物", "结婚", "生小孩"  # 愿望
+              ]
+
+
+class Demand(JSONBaseModel):
+    """
+    需求
+    """
+    pass

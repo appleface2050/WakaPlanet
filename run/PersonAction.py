@@ -3,6 +3,8 @@ import datetime
 import sys
 import os
 
+from django.db import transaction
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 sys.path.append(BASE_DIR)
@@ -13,22 +15,64 @@ from django.core.wsgi import get_wsgi_application
 
 application = get_wsgi_application()
 
-from wkplanet.models import CurrentDate, Person, Desire
+from wkplanet.models import CurrentDate, Person, Desire, InventoryFood, Do, PersonSkill
 
 
 class PersonAction(object):
     def __init__(self):
         self.AVAILABLE_HOUR = 16
 
+    def cal_production(self, act, skill_exp):
+        if act == "farming":
+            return round(1 * skill_exp / 1000., 1)
+
+    def cal_skill_exp(self, type="product", skill=""):
+        if type == "product":
+            return 1
+        elif type == "learn_by_book":
+            pass
+        elif type == "learn_by_teacher":
+            pass
+        elif type == "self_learn":
+            return 3
+
+    def do(self, person, act, result, act_date):
+        """
+        一个小时事件从事某项工作
+        """
+        try:
+            with transaction.atomic():
+                if act == "farming":
+                    number = self.cal_production(act, PersonSkill.get_person_skill_exp(person_id=person.pk, skill=act))
+                    InventoryFood.do_add_food_by_farming(person.pk, act, number)              #增加产出
+                    PersonSkill.add_person_skill_exp(person.pk, act, self.cal_skill_exp())    #增加经验
+
+                Do.insert_a_data(person.pk, act, result, act_date)
+        except Exception, e:
+            print e
+            print "Do error"
+
     def act(self, person, date):
-        for hour in range(1, self.AVAILABLE_HOUR+1):
+        p_cache = {}
+        print person.first_name, " ", person.last_name, date
+        for hour in range(1, self.AVAILABLE_HOUR + 1):
             print hour
+            # if not p_cache.get("check_if_have_food_for_one_day", False) and not InventoryFood.check_if_have_food_for_one_day(person.pk):
+            # food_enough =
+            # if food_enough:
+            #     p_cache["check_if_have_food_for_one_day"] = True
+
+            if p_cache.get("check_if_have_food_for_one_day", False) or InventoryFood.check_if_have_food_for_one_day(
+                    person.pk):
+                if not p_cache.get("check_if_have_food_for_one_day", False):
+                    p_cache["check_if_have_food_for_one_day"] = True
+                    print "有吃的"
+            else:
+                print "没吃的"
+                self.do(person, "farming", "", date)
+
             "先看仓库是否还有1个食物，如果没有就farm直到出了一个食物"
             "然后根据愿望开展行为"
-
-
-
-        print person.first_name, " ", person.last_name, date
 
     def all_person_one_day_action(self, date):
         print "all person one day action"

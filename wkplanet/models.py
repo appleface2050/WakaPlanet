@@ -90,6 +90,35 @@ class PropertyType(object):
     ]
 
 
+class InventoryFood(JSONBaseModel):
+    person_id = models.IntegerField(default=0, null=False, blank=False)
+    property = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
+    inventory = models.FloatField(default=0.0, null=False, blank=False)
+    uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+    @classmethod
+    def do_add_food_by_farming(cls, person_id, property, number):
+        if cls.objects.filter(person_id=person_id, property=property).exists():
+            a = cls.objects.get(person_id=person_id, property=property)
+            a.inventory += number
+        else:
+            a = cls()
+            a.person_id = person_id
+            a.property = property
+            a.inventory = number
+        a.save()
+
+    @classmethod
+    def check_if_have_food_for_one_day(cls, person_id):
+        # print "check_if_have_food_for_one_day"
+        if cls.objects.filter(person_id=person_id).exists():
+            foods = cls.objects.filter(person_id=person_id)
+            for i in foods:
+                if i.inventory >= 1:
+                    return True
+        return False
+
+
 class PropertyInventory(JSONBaseModel):
     person_id = models.IntegerField(default=0, null=False, blank=False)
     property = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
@@ -112,6 +141,34 @@ class PersonSkill(JSONBaseModel):
     skill = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
     exp = models.IntegerField(default=1000, null=False, blank=False)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+    @classmethod
+    def get_person_skill_exp(cls, person_id, skill):
+        if not cls.objects.filter(person_id=person_id, skill=skill).exists():
+            return 0
+        else:
+            a = cls.objects.get(person_id=person_id, skill=skill)
+            return a.exp
+
+    @classmethod
+    def init_person_skill_exp_if_not_exist(cls, person_id, skill):
+        if cls.objects.filter(person_id=person_id, skill=skill).exists():
+            return "init_person_skill_exp person skill exist"
+        else:
+            a = cls()
+            a.person_id = person_id
+            a.skill = skill
+            a.save()
+
+    @classmethod
+    def add_person_skill_exp(cls, person_id, skill, exp):
+        if not cls.objects.filter(person_id=person_id, skill=skill).exists():
+            cls.init_person_skill_exp_if_not_exist(person_id, skill)
+
+        a = cls.objects.get(person_id=person_id, skill=skill)
+        a.exp += exp
+        a.save()
+        return a.exp
 
 
 class Person(JSONBaseModel):
@@ -152,8 +209,6 @@ class Person(JSONBaseModel):
         except Exception, e:
             print e
             print "create_a_origin_person error"
-
-
 
 
 class CurrentDate(JSONBaseModel):
@@ -200,6 +255,7 @@ class Character(object):
     """
     groups = ["追求安全感", "追求财富", "追求家庭生活", "追求艺术", "追求技术", "追求娱乐"]
 
+
 class PersonCharacter(JSONBaseModel):
     person_id = models.IntegerField(default=0, null=False, blank=False)
     character = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
@@ -215,9 +271,8 @@ class PersonCharacter(JSONBaseModel):
                 a = cls()
                 a.person_id = person_id
                 a.character = c
-                a.value = random.randint(1,9)
+                a.value = random.randint(1, 9)
                 a.save()
-
 
 
 class Desire(object):
@@ -231,15 +286,31 @@ class Desire(object):
               "存储更多食物", "结婚", "生小孩"  # 愿望
               ]
 
+
 class PersonDesire(JSONBaseModel):
     person_id = models.IntegerField(default=0, null=False, blank=False)
     desire = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
 
+class DoLog(JSONBaseModel):
+    person_id = models.IntegerField(default=0, null=False, blank=False)
+    act = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
+    result = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
+    act_date = models.DateField(null=True, verbose_name=u'行为时间', blank=True)
+    uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
-
-
+    @classmethod
+    def insert_a_data(cls, person_id, act, result, act_date):
+        a = cls()
+        a.person_id = person_id
+        a.act = act
+        a.result = result
+        a.act_date = act_date
+        try:
+            a.save()
+        except Exception, e:
+            print e
 
 # class Demand(JSONBaseModel):
 #     """

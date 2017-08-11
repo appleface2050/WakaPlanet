@@ -1,7 +1,7 @@
 # coding=utf-8
 from __future__ import unicode_literals
 
-from django.db import models
+from django.db import models, transaction
 import datetime
 import random
 # Create your models here.
@@ -79,14 +79,20 @@ d 教师训练，每小时6经验
 """
 
 
-class PropertyType(JSONBaseModel):
-    name = models.CharField(max_length=128, unique=True, null=False, blank=False)
-    uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+# class PropertyType(JSONBaseModel):
+#     name = models.CharField(max_length=128, unique=True, null=False, blank=False)
+#     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+class PropertyType(object):
+    groups = [
+        "food"
+        "ruby"
+    ]
 
 
 class PropertyInventory(JSONBaseModel):
     person_id = models.IntegerField(default=0, null=False, blank=False)
-    property_id = models.IntegerField(default=0, null=False, blank=False)
+    property = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
     inventory = models.FloatField(default=0.0, null=False, blank=False)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
@@ -101,14 +107,9 @@ class Skill(object):
     groups = ["farming", "building", "music", "painting", "mining"]
 
 
-# class Skill(JSONBaseModel):
-#     name = models.CharField(max_length=128, unique=True, null=False, blank=False)
-#     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
-
-
-class SkillPerson(JSONBaseModel):
-    skill_id = models.IntegerField(default=0, null=False, blank=False)
+class PersonSkill(JSONBaseModel):
     person_id = models.IntegerField(default=0, null=False, blank=False)
+    skill = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
     exp = models.IntegerField(default=1000, null=False, blank=False)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
@@ -144,10 +145,15 @@ class Person(JSONBaseModel):
             days=random.randint(365 * 18, 365 * 28))  # 初始年龄 18-28 之间
         p.join_date = CurrentDate.get_current_date()
         try:
-            p.save()
-            print name_dict
+            with transaction.atomic():
+                p.save()
+                PersonCharacter.create_new_person_character(p.pk)
+                print name_dict
         except Exception, e:
             print e
+            print "create_a_origin_person error"
+
+
 
 
 class CurrentDate(JSONBaseModel):
@@ -194,6 +200,25 @@ class Character(object):
     """
     groups = ["追求安全感", "追求财富", "追求家庭生活", "追求艺术", "追求技术", "追求娱乐"]
 
+class PersonCharacter(JSONBaseModel):
+    person_id = models.IntegerField(default=0, null=False, blank=False)
+    character = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
+    value = models.IntegerField(default=5, null=False, blank=False)
+    uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+    @classmethod
+    def create_new_person_character(cls, person_id):
+        if not Person.objects.filter(pk=person_id).exists():
+            raise Exception("person not exist")
+        else:
+            for c in Character.groups:
+                a = cls()
+                a.person_id = person_id
+                a.character = c
+                a.value = random.randint(1,9)
+                a.save()
+
+
 
 class Desire(object):
     """
@@ -206,9 +231,18 @@ class Desire(object):
               "存储更多食物", "结婚", "生小孩"  # 愿望
               ]
 
+class PersonDesire(JSONBaseModel):
+    person_id = models.IntegerField(default=0, null=False, blank=False)
+    desire = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
+    uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
-class Demand(JSONBaseModel):
-    """
-    需求
-    """
-    pass
+
+
+
+
+
+# class Demand(JSONBaseModel):
+#     """
+#     需求
+#     """
+#     pass

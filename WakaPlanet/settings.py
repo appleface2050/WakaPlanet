@@ -108,10 +108,14 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',  # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
         'NAME': 'wpl',  # Or path to database file if using sqlite3.
-        'USER': 'bluestackscntest',  # Not used with sqlite3.
-        'PASSWORD': 'Bluestacks2016test',  # Not used with sqlite3.
-        'HOST': '60.205.94.60',
-        'PORT': '33006',  # Set to empty string for default. Not used with sqlite3.
+        # 'USER': 'bluestackscntest',  # Not used with sqlite3.
+        # 'PASSWORD': 'Bluestacks2016test',  # Not used with sqlite3.
+        # 'HOST': '60.205.94.60',
+        # 'PORT': '33006',
+
+        'HOST': '127.0.0.1',
+        'USER': 'root',
+        'PORT': '3306',  # Set to empty string for default. Not used with sqlite3.
         'ATOMIC_REQUEST': True,
     },
 }

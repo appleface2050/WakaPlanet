@@ -36,9 +36,24 @@ class PersonAction(object):
         elif type == "self_learn":
             return 3
 
+    def eat_dinner(self, person, date):
+        """
+        吃掉1个食物
+        """
+        try:
+            with transaction.atomic():
+                InventoryFood.eat_dinner(person.pk)
+                DoLog.insert_a_data(person.pk, "eat_dinner", "success", date, 0)
+        except Exception, e:
+            print e
+            print "eat dinner error ~~"
+            transaction.rollback()
+        else:
+            transaction.commit()
+
     def do(self, person, act, result, act_date, act_hour):
         """
-        一个小时事件从事的活动
+        一个小时从事的活动
         """
         try:
             with transaction.atomic():
@@ -51,21 +66,6 @@ class PersonAction(object):
         except Exception, e:
             print e
             print "Do error"
-            transaction.rollback()
-        else:
-            transaction.commit()
-
-    def eat_dinner(self, person, date):
-        """
-        吃掉1个食物
-        """
-        try:
-            with transaction.atomic():
-                InventoryFood.eat_dinner(person.pk)
-                DoLog.insert_a_data(person.pk, "eat_dinner", "success", date, 0)
-        except Exception, e:
-            print e
-            print "eat dinner error ~~"
             transaction.rollback()
         else:
             transaction.commit()

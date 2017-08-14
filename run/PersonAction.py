@@ -15,8 +15,8 @@ from django.core.wsgi import get_wsgi_application
 
 application = get_wsgi_application()
 
-from wkplanet.models import CurrentDate, Person, Desire, InventoryFood, DoLog, PersonSkill
-
+from wkplanet.models import CurrentDate, Person, InventoryFood, DoLog, PersonSkill
+from wkplanet.model2 import Desire
 
 class PersonAction(object):
     def __init__(self):
@@ -61,6 +61,8 @@ class PersonAction(object):
                     number = self.cal_production(act, PersonSkill.get_person_skill_exp(person_id=person.pk, skill=act))
                     InventoryFood.do_add_food_by_farming(person.pk, act, number)  # 增加产出
                     PersonSkill.add_person_skill_exp(person.pk, act, self.cal_skill_exp())  # 增加经验
+                else:
+                    pass
 
                 DoLog.insert_a_data(person.pk, act, result, act_date, act_hour)
         except Exception, e:

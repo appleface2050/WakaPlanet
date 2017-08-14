@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.core.cache import cache
 
 from util.waka import name_generator
+from wkplanet.model2 import Character
 
 """
 #todo:
@@ -148,10 +149,6 @@ class RealEstate(JSONBaseModel):
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
 
-class Skill(object):
-    groups = ["farming", "building", "music", "painting", "mining"]
-
-
 class PersonSkill(JSONBaseModel):
     person_id = models.IntegerField(default=0, null=False, blank=False)
     skill = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
@@ -268,19 +265,27 @@ class CurrentDate(JSONBaseModel):
             print e
 
 
-class Character(object):
-    """
-    性格
-    每个人都有这6个倾向，1-9倾向程度
-    """
-    groups = ["追求安全感", "追求财富", "追求家庭生活", "追求艺术", "追求技术", "追求娱乐"]
-
 
 class PersonCharacter(JSONBaseModel):
     person_id = models.IntegerField(default=0, null=False, blank=False)
     character = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
     value = models.IntegerField(default=5, null=False, blank=False)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+    @classmethod
+    def get_person_character_by_person_id(cls, person_id):
+        result = cache.get("get_person_character_by_person_id@%s" % str(person_id))
+        if not result:
+            result = []
+            if not cls.objects.filter(pk=person_id).exists():
+                raise Exception("person character not exist")
+            else:
+                data = cls.objects.filter(person_id=person_id)
+                for i in data:
+                    result.append(i.toJSON())
+                cache.set("get_person_character_by_person_id@%s" % str(person_id), result, 3600)
+        return result
+
 
     @classmethod
     def create_new_person_character(cls, person_id):
@@ -295,16 +300,6 @@ class PersonCharacter(JSONBaseModel):
                 a.save()
 
 
-class Desire(object):
-    """
-    愿望
-    """
-    # groups = ["farming", "building", "music", "painting", "mining"]
-    groups = ["提升主要技能", "学习一项新的娱乐技能", "提升主要娱乐技能", "提升farming", "提升building", "提升mining", "提升music", "提升painting",
-              # 技能提升
-              "升级房子", "创作music", "创作painting", "mining",  # 明确使用技能进行生产
-              "存储更多食物", "结婚", "生小孩"  # 愿望
-              ]
 
 
 class PersonDesire(JSONBaseModel):

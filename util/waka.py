@@ -36,6 +36,19 @@ def windex(lst):
     return item
 
 
+def random_weight_from_dict(lst):
+    '''an attempt to make a random.choose() function that makes weighted choices
+    accepts a list of tuples with the item and probability as a pair'''
+    wtotal = sum(lst.values())
+    n = random.uniform(0, wtotal)
+    for key in lst:
+        if n < lst.get(key):
+            break
+        n = n - lst.get(key)
+    return key
+
+
 if __name__ == '__main__':
-    a = [("A",10),("B",5)]
-    print windex(a)
+    # a = [("A",10),("B",5)]
+    a = {"a": 10, "b":5}
+    print random_weight_from_dict(a)

@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.core.cache import cache
 
 from util.waka import name_generator
-from wkplanet.model2 import Character
+from wkplanet.model2 import Character, Desire
 
 """
 #todo:
@@ -223,6 +223,8 @@ class Person(JSONBaseModel):
                 p.save()
                 PersonCharacter.create_new_person_character(p.pk)
                 print name_dict
+                desires = Desire.generate_desire_weight_dict_by_character(p.pk)
+                PersonDesire.insert_desire_data(p.pk, desires)
         except Exception, e:
             print e
             print "create_a_origin_person error"
@@ -265,7 +267,6 @@ class CurrentDate(JSONBaseModel):
             print e
 
 
-
 class PersonCharacter(JSONBaseModel):
     person_id = models.IntegerField(default=0, null=False, blank=False)
     character = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
@@ -286,7 +287,6 @@ class PersonCharacter(JSONBaseModel):
                 cache.set("get_person_character_by_person_id@%s" % str(person_id), result, 3600)
         return result
 
-
     @classmethod
     def create_new_person_character(cls, person_id):
         if not Person.objects.filter(pk=person_id).exists():
@@ -300,12 +300,41 @@ class PersonCharacter(JSONBaseModel):
                 a.save()
 
 
-
-
 class PersonDesire(JSONBaseModel):
     person_id = models.IntegerField(default=0, null=False, blank=False)
     desire = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+    @classmethod
+    def delete_desire(cls, person_id, desire):
+        a = cls.objects.get(person_id=person_id, desire=desire)
+        a.delete()
+
+    @classmethod
+    def get_desire_by_person_id(cls, person_id):
+        desires = []
+        if cls.desire_empty(person_id):
+            desires = Desire.generate_desire_weight_dict_by_character(person_id)
+            cls.insert_desire_data(person_id, desires)
+        else:
+            a = cls.objects.filter(person_id=person_id).values("desire")
+            for i in a:
+                desires.append(i.get("desire"))
+        return desires
+
+    @classmethod
+    def desire_empty(cls, person_id):
+        return not cls.objects.filter(person_id=person_id).exists()
+
+    @classmethod
+    def insert_desire_data(cls, person_id, desires):
+        count = cls.objects.filter(person_id=person_id).count()
+        insert_count = 3 - count
+        for i in desires[:insert_count]:
+            a = cls()
+            a.person_id = person_id
+            a.desire = i
+            a.save()
 
 
 class DoLog(JSONBaseModel):

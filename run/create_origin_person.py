@@ -18,3 +18,6 @@ from wkplanet.models import CurrentDate, Person
 
 if __name__ == '__main__':
     Person.create_a_origin_person()
+
+
+

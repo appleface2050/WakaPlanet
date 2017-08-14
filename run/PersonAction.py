@@ -15,7 +15,7 @@ from django.core.wsgi import get_wsgi_application
 
 application = get_wsgi_application()
 
-from wkplanet.models import CurrentDate, Person, InventoryFood, DoLog, PersonSkill
+from wkplanet.models import CurrentDate, Person, InventoryFood, DoLog, PersonSkill, PersonDesire
 from wkplanet.model2 import Desire
 
 class PersonAction(object):
@@ -91,6 +91,8 @@ class PersonAction(object):
                     p_cache["check_if_have_food_for_one_day"] = True
                     print "有吃的"
                     # doto：处理有吃的的时候根据desire进行活动
+                desire = PersonDesire.get_desire_by_person_id(person.pk)
+                print desire
             else:
                 print "没吃的"
                 self.do(person, "farming", "", date, hour)

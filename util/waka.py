@@ -15,7 +15,7 @@ def name_generator():
     a = None
     while count <= 10 and not done:
         try:
-            a = requests.get("https://uinames.com/api/?region=United%20States", timeout=5)
+            a = requests.get("https://uinames.com/api/?region=United%20States", timeout=10)
         except requests.exceptions.ConnectTimeout, e:
             print e
         if a:

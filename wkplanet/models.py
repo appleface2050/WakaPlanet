@@ -97,6 +97,19 @@ class InventoryFood(JSONBaseModel):
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
     @classmethod
+    def eat_dinner(cls, person_id, property="farming"):
+        if not cls.check_if_have_food_for_one_day(person_id):
+            raise Exception("do not have enouph food!!!")
+        else:
+            a = cls.objects.get(person_id=person_id, property=property)
+            a.inventory -= 1
+            try:
+                a.save()
+            except Exception, e:
+                print e
+                print "eat dinner error"
+
+    @classmethod
     def do_add_food_by_farming(cls, person_id, property, number):
         if cls.objects.filter(person_id=person_id, property=property).exists():
             a = cls.objects.get(person_id=person_id, property=property)
@@ -110,11 +123,14 @@ class InventoryFood(JSONBaseModel):
 
     @classmethod
     def check_if_have_food_for_one_day(cls, person_id):
+        """
+        8个食物
+        """
         # print "check_if_have_food_for_one_day"
         if cls.objects.filter(person_id=person_id).exists():
             foods = cls.objects.filter(person_id=person_id)
             for i in foods:
-                if i.inventory >= 1:
+                if i.inventory >= 1.0:
                     return True
         return False
 
@@ -144,11 +160,15 @@ class PersonSkill(JSONBaseModel):
 
     @classmethod
     def get_person_skill_exp(cls, person_id, skill):
-        if not cls.objects.filter(person_id=person_id, skill=skill).exists():
-            return 0
-        else:
-            a = cls.objects.get(person_id=person_id, skill=skill)
-            return a.exp
+        exp = cache.get("get_person_skill_exp@%s@%s" % (str(person_id), skill))
+        if not exp:
+            if not cls.objects.filter(person_id=person_id, skill=skill).exists():
+                exp = 1000
+            else:
+                a = cls.objects.get(person_id=person_id, skill=skill)
+                exp = a.exp
+            cache.set("get_person_skill_exp@%s@%s" % (str(person_id), skill), exp, 10)
+        return exp
 
     @classmethod
     def init_person_skill_exp_if_not_exist(cls, person_id, skill):
@@ -298,15 +318,17 @@ class DoLog(JSONBaseModel):
     act = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
     result = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
     act_date = models.DateField(null=True, verbose_name=u'行为时间', blank=True)
+    act_hour = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'行为小时')
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
     @classmethod
-    def insert_a_data(cls, person_id, act, result, act_date):
+    def insert_a_data(cls, person_id, act, result, act_date, act_hour):
         a = cls()
         a.person_id = person_id
         a.act = act
         a.result = result
         a.act_date = act_date
+        a.act_hour = act_hour
         try:
             a.save()
         except Exception, e:

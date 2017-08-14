@@ -15,7 +15,7 @@ from django.core.wsgi import get_wsgi_application
 
 application = get_wsgi_application()
 
-from wkplanet.models import CurrentDate, Person, Desire, InventoryFood, Do, PersonSkill
+from wkplanet.models import CurrentDate, Person, Desire, InventoryFood, DoLog, PersonSkill
 
 
 class PersonAction(object):
@@ -24,7 +24,7 @@ class PersonAction(object):
 
     def cal_production(self, act, skill_exp):
         if act == "farming":
-            return round(1 * skill_exp / 1000., 1)
+            return round((1 * skill_exp / 1000.) / 8.0, 3)
 
     def cal_skill_exp(self, type="product", skill=""):
         if type == "product":
@@ -36,27 +36,48 @@ class PersonAction(object):
         elif type == "self_learn":
             return 3
 
-    def do(self, person, act, result, act_date):
+    def do(self, person, act, result, act_date, act_hour):
         """
-        一个小时事件从事某项工作
+        一个小时事件从事的活动
         """
         try:
             with transaction.atomic():
                 if act == "farming":
                     number = self.cal_production(act, PersonSkill.get_person_skill_exp(person_id=person.pk, skill=act))
-                    InventoryFood.do_add_food_by_farming(person.pk, act, number)              #增加产出
-                    PersonSkill.add_person_skill_exp(person.pk, act, self.cal_skill_exp())    #增加经验
+                    InventoryFood.do_add_food_by_farming(person.pk, act, number)  # 增加产出
+                    PersonSkill.add_person_skill_exp(person.pk, act, self.cal_skill_exp())  # 增加经验
 
-                Do.insert_a_data(person.pk, act, result, act_date)
+                DoLog.insert_a_data(person.pk, act, result, act_date, act_hour)
         except Exception, e:
             print e
             print "Do error"
+            transaction.rollback()
+        else:
+            transaction.commit()
+
+    def eat_dinner(self, person, date):
+        """
+        吃掉1个食物
+        """
+        try:
+            with transaction.atomic():
+                InventoryFood.eat_dinner(person.pk)
+                DoLog.insert_a_data(person.pk, "eat_dinner", "success", date, 0)
+        except Exception, e:
+            print e
+            print "eat dinner error ~~"
+            transaction.rollback()
+        else:
+            transaction.commit()
 
     def act(self, person, date):
+        """
+        某人一天从事的活动
+        """
         p_cache = {}
         print person.first_name, " ", person.last_name, date
         for hour in range(1, self.AVAILABLE_HOUR + 1):
-            print hour
+            print "hour:", hour
             # if not p_cache.get("check_if_have_food_for_one_day", False) and not InventoryFood.check_if_have_food_for_one_day(person.pk):
             # food_enough =
             # if food_enough:
@@ -67,9 +88,10 @@ class PersonAction(object):
                 if not p_cache.get("check_if_have_food_for_one_day", False):
                     p_cache["check_if_have_food_for_one_day"] = True
                     print "有吃的"
+                    # doto：处理有吃的的时候根据desire进行活动
             else:
                 print "没吃的"
-                self.do(person, "farming", "", date)
+                self.do(person, "farming", "", date, hour)
 
             "先看仓库是否还有1个食物，如果没有就farm直到出了一个食物"
             "然后根据愿望开展行为"
@@ -80,6 +102,7 @@ class PersonAction(object):
         persons = Person.get_all_alive_person()
         for p in persons:
             self.act(p, date)
+            self.eat_dinner(p, date)
 
 
 if __name__ == '__main__':

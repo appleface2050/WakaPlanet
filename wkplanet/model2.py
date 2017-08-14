@@ -16,6 +16,7 @@ from django.core.wsgi import get_wsgi_application
 
 class Skill(object):
     groups = ["farming", "building", "music", "painting", "mining"]
+    entertainment_skill = ["music", "painting"]
 
 
 class Character(object):
@@ -37,10 +38,10 @@ class Desire(object):
     #           ]
 
     groups = ["main skill upgrade", "main entertainment skill upgrade", "farming upgrade", "building upgrade",
-             "mining upgrade", "music upgrade", "painting upgrade",
-             "do house", "do music", "do painting", "do mining",
-             "save food", "marriage", "have a baby"
-             ]
+              "mining upgrade", "music upgrade", "painting upgrade",
+              "do house", "do music", "do painting", "do mining",
+              "save food", "marriage", "have a baby"
+              ]
 
     @classmethod
     def generate_desire_weight_dict_by_character(cls, person_id):
@@ -101,3 +102,31 @@ class Desire(object):
             result.append(random_weight_from_dict(desire))
         result = list(set(result))[:3]
         return result
+
+
+class Action(object):
+    @classmethod
+    def get_person_action_by_desire(cls, person, desires):
+        from wkplanet.models import PersonSkill
+        from wkplanet.models import Person
+        assert isinstance(person, Person)
+        # for desire in desires:
+        desire = desires[0]
+        if desire == "main skill upgrade":
+            main_skill = PersonSkill.get_main_skill(person.pk)
+            return main_skill + " upgrade"
+        elif desire == "main entertainment skill upgrade":
+            main_etm_skill = PersonSkill.get_main_entertainment_skill(person.pk)
+            return main_etm_skill + " upgrade"
+        elif desire in ("farming upgrade", "building upgrade", "mining upgrade", "music upgrade", "painting upgrade"):
+            return desire
+        elif desire in ("do house", "do music", "do painting", "do mining"):
+            return desire
+        elif desire == "save food":
+            pass
+        elif desire == "marriage":
+            pass
+        elif desire == "have a baby":
+            pass
+        else:
+            raise Exception("desire is not good")

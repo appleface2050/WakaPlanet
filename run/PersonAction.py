@@ -16,7 +16,7 @@ from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
 
 from wkplanet.models import CurrentDate, Person, InventoryFood, DoLog, PersonSkill, PersonDesire
-from wkplanet.model2 import Desire
+from wkplanet.model2 import Desire, Action
 
 class PersonAction(object):
     def __init__(self):
@@ -57,17 +57,22 @@ class PersonAction(object):
         """
         try:
             with transaction.atomic():
+                if act is None:
+                    raise Exception("act is none")
                 if act == "farming":
                     number = self.cal_production(act, PersonSkill.get_person_skill_exp(person_id=person.pk, skill=act))
                     InventoryFood.do_add_food_by_farming(person.pk, act, number)  # 增加产出
                     PersonSkill.add_person_skill_exp(person.pk, act, self.cal_skill_exp())  # 增加经验
-                else:
+                elif act == "farming upgrade":
+                    pass
+
+                elif act == "painting upgrade":
                     pass
 
                 DoLog.insert_a_data(person.pk, act, result, act_date, act_hour)
         except Exception, e:
             print e
-            print "Do error"
+            # print "Do error"
             transaction.rollback()
         else:
             transaction.commit()
@@ -91,8 +96,11 @@ class PersonAction(object):
                     p_cache["check_if_have_food_for_one_day"] = True
                     print "有吃的"
                     # doto：处理有吃的的时候根据desire进行活动
-                desire = PersonDesire.get_desire_by_person_id(person.pk)
-                print desire
+                desires = PersonDesire.get_desire_by_person_id(person.pk)
+                print desires
+                act = Action.get_person_action_by_desire(person, desires)
+                print act
+                self.do(person, act, "", date, hour)
             else:
                 print "没吃的"
                 self.do(person, "farming", "", date, hour)

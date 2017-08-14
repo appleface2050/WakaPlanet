@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.core.cache import cache
 
 from util.waka import name_generator
-from wkplanet.model2 import Character, Desire
+from wkplanet.model2 import Character, Desire, Skill
 
 """
 #todo:
@@ -154,6 +154,31 @@ class PersonSkill(JSONBaseModel):
     skill = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
     exp = models.IntegerField(default=1000, null=False, blank=False)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+    @classmethod
+    def get_main_skill(cls, person_id):
+        main_skill = cache.get("get_main_skill@%s" % str(person_id))
+        if not main_skill:
+            if cls.objects.filter(person_id=person_id).exists():
+                data = cls.objects.filter(person_id=person_id).order_by("-exp")[0]
+                main_skill = data.skill
+            else:
+                main_skill = "farming"
+            cache.set("get_main_skill@%s" % str(person_id), main_skill, 3600)
+        return main_skill
+
+    @classmethod
+    def get_main_entertainment_skill(cls, person_id):
+        main_etm_skill = cache.get("get_main_entertainment_skill@%s" % str(person_id))
+        if not main_etm_skill:
+            if cls.objects.filter(person_id=person_id, skill__in=Skill.entertainment_skill).exists():
+                data = cls.objects.filter(person_id=person_id, skill__in=Skill.entertainment_skill).order_by("-exp")[0]
+                main_etm_skill = data.skill
+                assert main_etm_skill in Skill.entertainment_skill
+            else:
+                main_etm_skill = random.choice(Skill.entertainment_skill)
+            cache.set("get_main_entertainment_skill@%s" % str(person_id), main_etm_skill, 3600)
+        return main_etm_skill
 
     @classmethod
     def get_person_skill_exp(cls, person_id, skill):

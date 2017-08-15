@@ -384,6 +384,7 @@ class DoLog(JSONBaseModel):
         except Exception, e:
             print e
 
+
 # class Demand(JSONBaseModel):
 #     """
 #     需求
@@ -469,9 +470,16 @@ class Desire(object):
 
         print desire
         result = []
+
         for i in range(5):
             result.append(random_weight_from_dict(desire))
         result = list(set(result))[:3]
+        rand_desire = []
+        for i in result:
+            # tmp = {i:desire.get(i)}
+            tmp = {"desire": i, "weight": desire.get(i), "person_id": person_id, "origin": 0, "target": 0}
+            rand_desire.append(tmp)
+        print rand_desire
         return result
 
 
@@ -494,7 +502,7 @@ class Action(object):
         elif desire == "save food":
             return desire
 
-        #todo:
+        # todo:
         elif desire == "marriage":
             return "do house"
         elif desire == "have a baby":

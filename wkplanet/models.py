@@ -9,8 +9,7 @@ from util.basemodel import JSONBaseModel
 from django.utils import timezone
 from django.core.cache import cache
 
-from util.waka import name_generator
-from wkplanet.model2 import Character, Desire, Skill
+from util.waka import name_generator, random_weight_from_dict
 
 """
 #todo:
@@ -328,6 +327,8 @@ class PersonCharacter(JSONBaseModel):
 class PersonDesire(JSONBaseModel):
     person_id = models.IntegerField(default=0, null=False, blank=False)
     desire = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
+    origin = models.FloatField(default=0.0, null=False, blank=False)
+    target = models.FloatField(default=0.0, null=False, blank=False)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
     @classmethod
@@ -388,3 +389,115 @@ class DoLog(JSONBaseModel):
 #     需求
 #     """
 #     pass
+
+
+########################################################################################################################################################
+class Skill(object):
+    groups = ["farming", "building", "music", "painting", "mining"]
+    entertainment_skill = ["music", "painting"]
+
+
+class Character(object):
+    """
+    性格
+    每个人都有这6个倾向，1-9倾向程度
+    """
+    groups = ["safty", "wealth", "family", "art", "skill", "entertainment"]
+
+
+class Desire(object):
+    """
+    愿望
+    """
+    groups = ["main skill upgrade", "main entertainment skill upgrade", "farming upgrade", "building upgrade",
+              "mining upgrade", "music upgrade", "painting upgrade",
+              "do house", "do music", "do painting", "do mining",
+              "save food", "marriage", "have a baby"
+              ]
+
+    @classmethod
+    def generate_desire_weight_dict_by_character(cls, person_id):
+        pc = PersonCharacter.get_person_character_by_person_id(person_id)
+        # print pc
+
+        desire = {}
+        for i in Desire.groups:
+            desire[i] = 5  # 默认权重为5
+
+        for c in pc:
+            if c.get("character") == "safty":
+                desire["save food"] += c.get("value") * 10
+                desire["main skill upgrade"] += c.get("value") * 7.5
+                desire["marriage"] += c.get("value") * 5
+                desire["farming upgrade"] += c.get("value") * 5
+
+            elif c.get("character") == "wealth":
+                desire["save food"] += c.get("value") * 5
+                desire["do mining"] += c.get("value") * 3.5
+                desire["main skill upgrade"] += c.get("value") * 7.5
+                desire["do house"] += c.get("value") * 7
+
+            elif c.get("character") == "family":
+                desire["do house"] += c.get("value") * 7
+                desire["marriage"] += c.get("value") * 10
+                desire["have a baby"] += c.get("value") * 10
+                desire["building upgrade"] += c.get("value") * 5
+
+            elif c.get("character") == "art":
+                desire["do music"] += c.get("value") * 10
+                desire["do painting"] += c.get("value") * 10
+                desire["main entertainment skill upgrade"] += c.get("value") * 7
+                desire["music upgrade"] += c.get("value") * 7
+                desire["painting upgrade"] += c.get("value") * 7
+
+            elif c.get("character") == "skill":
+                desire["main skill upgrade"] += c.get("value") * 10
+                desire["main entertainment skill upgrade"] += c.get("value") * 5
+                desire["farming upgrade"] += c.get("value") * 1
+                desire["building upgrade"] += c.get("value") * 1
+                desire["mining upgrade"] += c.get("value") * 1
+                desire["music upgrade"] += c.get("value") * 1
+                desire["painting upgrade"] += c.get("value") * 1
+
+            elif c.get("character") == 'entertainment':
+                desire["main entertainment skill upgrade"] += c.get("value") * 5
+                desire["mining upgrade"] += c.get("value") * 2
+                desire["music upgrade"] += c.get("value") * 2
+                desire["painting upgrade"] += c.get("value") * 2
+                desire["do music"] += c.get("value") * 7
+                desire["do painting"] += c.get("value") * 7
+
+        print desire
+        result = []
+        for i in range(5):
+            result.append(random_weight_from_dict(desire))
+        result = list(set(result))[:3]
+        return result
+
+
+class Action(object):
+    @classmethod
+    def get_person_action_by_desire(cls, person, desires):
+        assert isinstance(person, Person)
+        # for desire in desires:
+        desire = desires[0]
+        if desire == "main skill upgrade":
+            main_skill = PersonSkill.get_main_skill(person.pk)
+            return main_skill + " upgrade"
+        elif desire == "main entertainment skill upgrade":
+            main_etm_skill = PersonSkill.get_main_entertainment_skill(person.pk)
+            return main_etm_skill + " upgrade"
+        elif desire in ("farming upgrade", "building upgrade", "mining upgrade", "music upgrade", "painting upgrade"):
+            return desire
+        elif desire in ("do house", "do music", "do painting", "do mining"):
+            return desire
+        elif desire == "save food":
+            return desire
+
+        #todo:
+        elif desire == "marriage":
+            return "do house"
+        elif desire == "have a baby":
+            return "do house"
+        else:
+            raise Exception("desire is not good")

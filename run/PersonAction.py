@@ -15,8 +15,8 @@ from django.core.wsgi import get_wsgi_application
 
 application = get_wsgi_application()
 
-from wkplanet.models import CurrentDate, Person, InventoryFood, DoLog, PersonSkill, PersonDesire
-from wkplanet.model2 import Desire, Action
+from wkplanet.models import CurrentDate, Person, InventoryFood, DoLog, PersonSkill, PersonDesire, Action
+
 
 class PersonAction(object):
     def __init__(self):
@@ -65,8 +65,13 @@ class PersonAction(object):
                     PersonSkill.add_person_skill_exp(person.pk, act, self.cal_skill_exp())  # 增加经验
                 elif act == "farming upgrade":
                     pass
-
                 elif act == "painting upgrade":
+                    pass
+                elif act == "music upgrade":
+                    pass
+                elif act == "building upgrade":
+                    pass
+                elif act == "mining upgrade":
                     pass
 
                 DoLog.insert_a_data(person.pk, act, result, act_date, act_hour)

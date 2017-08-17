@@ -90,11 +90,89 @@ class PropertyType(object):
     ]
 
 
+class Painting(JSONBaseModel):
+    person_id = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'所有人')
+    author = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'作者')
+    create_date = models.DateField(null=True, verbose_name=u'完成时间', blank=True)
+    score = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'评分')  # 0 - 100
+    uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+
+class PaintingProcess(JSONBaseModel):
+    author = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'作者')
+    start_date = models.DateField(null=True, verbose_name=u'完成时间', blank=True)
+    work_hour = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'创作时长')
+    effort = models.IntegerField(default=0, null=False, blank=False)
+    uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+    @classmethod
+    def add_effort(cls, author, start_date, work_hour, effort):
+        if not cls.objects.filter(author=author).exists():
+            a = cls()
+            a.author = author
+            a.start_date = start_date
+            a.work_hour = work_hour
+            a.effort = effort
+            a.save()
+        else:
+            a = cls.objects.filter(author=author)
+            a.work_hour += work_hour
+            if a.work_hour >= 100:
+                cls.create_painting(a.pk)
+            else:
+                a.effort += effort
+                a.save()
+
+    @classmethod
+    def create_painting(cls, painting_process_id):
+        if cls.objects.get(pk=painting_process_id).work_hour < 100:
+            raise Exception("painting work hour < 100")
+        else:
+            a = cls.objects.get(pk=painting_process_id)
+            # 作品评分为effort/100
+            score = a.effort / 100
+            # 出个作品概率为1/100
+            if random.randint(1, 100) >= 95:
+                result = score
+            else:
+                result = 0
+        a.delete()
+        return result
+
+class MiningProcess(JSONBaseModel):
+    person_id = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'版权所有人')
+    type = models.CharField(default="ruby", max_length=128, unique=False, null=False, blank=False)
+    effort = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'1000点出一个ruby')
+    uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+
+class Music(JSONBaseModel):
+    person_id = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'版权所有人')
+    author = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'作者')
+    create_date = models.DateField(null=True, verbose_name=u'完成时间', blank=True)
+    score = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'评分')  # 0 - 100
+    uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+class MusicProcess(JSONBaseModel):
+    author = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'作者')
+    start_date = models.DateField(null=True, verbose_name=u'完成时间', blank=True)
+    work_hour = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'创作时长')
+    effort = models.IntegerField(default=0, null=False, blank=False)
+    uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+
 class InventoryFood(JSONBaseModel):
     person_id = models.IntegerField(default=0, null=False, blank=False)
     property = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
     inventory = models.FloatField(default=0.0, null=False, blank=False)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+    @classmethod
+    def get_inventory_by_person_id_property(cls, person_id, property):
+        if not cls.objects.filter(person_id=person_id, property=property).exists():
+            return 0
+        else:
+            return cls.objects.get(person_id=person_id, property=property).inventory
 
     @classmethod
     def eat_dinner(cls, person_id, property="farming"):
@@ -144,8 +222,20 @@ class PropertyInventory(JSONBaseModel):
 
 class RealEstate(JSONBaseModel):
     work_hours = models.IntegerField(default=0, null=False, blank=False)
-    belong = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'所属人')
+    person_id = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'所属人')
+    in_use = models.BooleanField(default=False)  # 一个人最多只有一个房子在使用
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+    @classmethod
+    def get_work_hours_by_belong(cls, person_id):
+        if not cls.objects.filter(person_id=person_id):  # 没房子
+            return 0
+        elif cls.objects.filter(person_id=person_id, in_use=True).exists():  # 有房子且房子正在使用中
+            a = cls.objects.get(person_id=person_id, in_use=True)
+            return a.work_hours
+        else:  # 有房子房子没有在使用
+            a = cls.objects.filter(person_id=person_id).order_by("-work_hours")[0]
+            return a.work_hours
 
 
 class PersonSkill(JSONBaseModel):
@@ -338,15 +428,15 @@ class PersonDesire(JSONBaseModel):
 
     @classmethod
     def get_desire_by_person_id(cls, person_id):
-        desires = []
+        result = []
         if cls.desire_empty(person_id):
             desires = Desire.generate_desire_weight_dict_by_character(person_id)
             cls.insert_desire_data(person_id, desires)
         else:
-            a = cls.objects.filter(person_id=person_id).values("desire")
+            a = cls.objects.filter(person_id=person_id)
             for i in a:
-                desires.append(i.get("desire"))
-        return desires
+                result.append(i.toJSON())
+        return result
 
     @classmethod
     def desire_empty(cls, person_id):
@@ -354,12 +444,14 @@ class PersonDesire(JSONBaseModel):
 
     @classmethod
     def insert_desire_data(cls, person_id, desires):
-        count = cls.objects.filter(person_id=person_id).count()
+        count = cls.objects.filter(person_id=person_id).count()  # 还有的desire数量
         insert_count = 3 - count
         for i in desires[:insert_count]:
             a = cls()
             a.person_id = person_id
-            a.desire = i
+            a.desire = i["desire"]
+            a.origin = i["origin"]
+            a.target = i["target"]
             a.save()
 
 
@@ -418,6 +510,9 @@ class Desire(object):
 
     @classmethod
     def generate_desire_weight_dict_by_character(cls, person_id):
+        """
+        根据character生成desire
+        """
         pc = PersonCharacter.get_person_character_by_person_id(person_id)
         # print pc
 
@@ -474,13 +569,59 @@ class Desire(object):
         for i in range(5):
             result.append(random_weight_from_dict(desire))
         result = list(set(result))[:3]
-        rand_desire = []
+        randed_desire_list = []
         for i in result:
             # tmp = {i:desire.get(i)}
-            tmp = {"desire": i, "weight": desire.get(i), "person_id": person_id, "origin": 0, "target": 0}
-            rand_desire.append(tmp)
-        print rand_desire
-        return result
+            origin, target = cls.cal_desire_origin_target(person_id, i)
+            tmp = {"desire": i, "weight": desire.get(i), "person_id": person_id, "origin": origin, "target": target}
+            randed_desire_list.append(tmp)
+        print randed_desire_list
+        return randed_desire_list
+
+    @classmethod
+    def cal_desire_origin_target(self, person_id, desire):
+        origin, target = None, None
+        assert desire in Desire.groups
+        if desire == "main skill upgrade":
+            origin ,target = 0, 0
+        elif desire == "farming upgrade":
+            origin = PersonSkill.get_person_skill_exp(person_id, "farming")
+            target = origin + 1000
+        elif desire == "building upgrade":
+            origin = PersonSkill.get_person_skill_exp(person_id, "building")
+            target = origin + 1000
+        elif desire == "mining upgrade":
+            origin = PersonSkill.get_person_skill_exp(person_id, "mining")
+            target = origin + 1000
+        elif desire == "music upgrade":
+            origin = PersonSkill.get_person_skill_exp(person_id, "music")
+            target = origin + 1000
+        elif desire == "painting upgrade":
+            origin = PersonSkill.get_person_skill_exp(person_id, "painting")
+            target = origin + 1000
+        elif desire == "do house":
+            origin = RealEstate.get_work_hours_by_belong(person_id)
+            target = origin + 1000
+        elif desire == "do music":
+            origin = 0
+            target = 100
+        elif desire == "do painting":
+            origin = 0
+            target = 100
+        elif desire == "do mining":
+            origin = 0
+            target = 1000
+        elif desire == "save food":
+            origin = InventoryFood.get_inventory_by_person_id_property(person_id, "farming")
+            target += origin
+        elif desire == "marriage":
+            pass
+        elif desire == "have a baby":
+            pass
+        if origin == None or target == None:
+            raise Exception("origin or target is None")
+        else:
+            return origin, target
 
 
 class Action(object):
@@ -489,23 +630,26 @@ class Action(object):
         assert isinstance(person, Person)
         # for desire in desires:
         desire = desires[0]
-        if desire == "main skill upgrade":
+        desire_name = desire.get("desire")
+        if desire_name == "main skill upgrade":
             main_skill = PersonSkill.get_main_skill(person.pk)
             return main_skill + " upgrade"
-        elif desire == "main entertainment skill upgrade":
+        elif desire_name == "main entertainment skill upgrade":
             main_etm_skill = PersonSkill.get_main_entertainment_skill(person.pk)
             return main_etm_skill + " upgrade"
-        elif desire in ("farming upgrade", "building upgrade", "mining upgrade", "music upgrade", "painting upgrade"):
-            return desire
-        elif desire in ("do house", "do music", "do painting", "do mining"):
-            return desire
-        elif desire == "save food":
-            return desire
+        elif desire_name in (
+        "farming upgrade", "building upgrade", "mining upgrade", "music upgrade", "painting upgrade"):
+            return desire_name
+        elif desire_name in ("do house", "do music", "do painting", "do mining"):
+            return desire_name
+        elif desire_name == "save food":
+            return desire_name
 
         # todo:
-        elif desire == "marriage":
+        elif desire_name == "marriage":
             return "do house"
-        elif desire == "have a baby":
+        elif desire_name == "have a baby":
             return "do house"
         else:
             raise Exception("desire is not good")
+            print desire_name

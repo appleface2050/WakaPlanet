@@ -13,7 +13,8 @@ from django.core.wsgi import get_wsgi_application
 
 application = get_wsgi_application()
 
-from wkplanet.models import Desire
+from wkplanet.models import CurrentDate, Person
+
 
 if __name__ == '__main__':
-    print Desire.generate_desire_weight_dict_by_character(1)
+    Person.create_a_origin_person()

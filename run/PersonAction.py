@@ -55,6 +55,7 @@ class PersonAction(object):
         """
         一个小时从事的活动
         """
+        print "act: ", act
         try:
             with transaction.atomic():
                 if act is None:
@@ -102,13 +103,14 @@ class PersonAction(object):
                     print "有吃的"
                     # doto：处理有吃的的时候根据desire进行活动
                 desires = PersonDesire.get_desire_by_person_id(person.pk)
-                print desires
+                print "desires: ",desires
                 act = Action.get_person_action_by_desire(person, desires)
-                print act
-                self.do(person, act, "", date, hour)
+                act = "farming upgrade"
             else:
                 print "没吃的"
-                self.do(person, "farming", "", date, hour)
+                act = "farming"
+
+            self.do(person, act, "", date, hour)
 
             "先看仓库是否还有1个食物，如果没有就farm直到出了一个食物"
             "然后根据愿望开展行为"

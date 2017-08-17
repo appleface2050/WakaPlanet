@@ -15,7 +15,8 @@ from django.core.wsgi import get_wsgi_application
 
 application = get_wsgi_application()
 
-from wkplanet.models import CurrentDate, Person, InventoryFood, DoLog, PersonSkill, PersonDesire, Action
+from wkplanet.models import CurrentDate, Person, InventoryFood, DoLog, PersonSkill, PersonDesire, Action, \
+    PaintingProcess
 
 
 class PersonAction(object):
@@ -25,6 +26,8 @@ class PersonAction(object):
     def cal_production(self, act, skill_exp):
         if act == "farming":
             return round((1 * skill_exp / 1000.) / 8.0, 3)
+        if act == "do painting":
+            return round((1 * skill_exp / 1000.), 3)
 
     def cal_skill_exp(self, type="product", skill=""):
         if type == "product":
@@ -65,16 +68,29 @@ class PersonAction(object):
                     InventoryFood.do_add_food_by_farming(person.pk, act, number)  # 增加产出
                     PersonSkill.add_person_skill_exp(person.pk, act, self.cal_skill_exp())  # 增加经验
                 elif act == "farming upgrade":
-                    pass
+                    PersonSkill.add_person_skill_exp(person.pk, "farming", self.cal_skill_exp(type="self_learn"))
                 elif act == "painting upgrade":
-                    pass
+                    PersonSkill.add_person_skill_exp(person.pk, "painting", self.cal_skill_exp(type="self_learn"))
                 elif act == "music upgrade":
-                    pass
+                    PersonSkill.add_person_skill_exp(person.pk, "music", self.cal_skill_exp(type="self_learn"))
                 elif act == "building upgrade":
-                    pass
+                    PersonSkill.add_person_skill_exp(person.pk, "building", self.cal_skill_exp(type="self_learn"))
                 elif act == "mining upgrade":
+                    PersonSkill.add_person_skill_exp(person.pk, "mining", self.cal_skill_exp(type="self_learn"))
+                elif act == "do painting":
+                    effort = self.cal_production(act, PersonSkill.get_person_skill_exp(person_id=person.pk,
+                                                                                       skill="painting"))
+                    PaintingProcess.add_effort(person.pk, act_date, 1, effort)
+                elif act == "do music":
                     pass
-
+                elif act == "do building":
+                    pass
+                elif act == "do mining":
+                    pass
+                # elif act == "do house":
+                #     pass
+                else:
+                    print act
                 DoLog.insert_a_data(person.pk, act, result, act_date, act_hour)
         except Exception, e:
             print e
@@ -103,9 +119,9 @@ class PersonAction(object):
                     print "有吃的"
                     # doto：处理有吃的的时候根据desire进行活动
                 desires = PersonDesire.get_desire_by_person_id(person.pk)
-                print "desires: ",desires
+                print "desires: ", desires
                 act = Action.get_person_action_by_desire(person, desires)
-                act = "farming upgrade"
+                # act = "farming upgrade"
             else:
                 print "没吃的"
                 act = "farming"

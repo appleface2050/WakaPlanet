@@ -97,6 +97,15 @@ class Painting(JSONBaseModel):
     score = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'评分')  # 0 - 100
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
+    @classmethod
+    def painting_success(cls, author, create_date, score):
+        a = cls()
+        a.person_id = author
+        a.author = author
+        a.create_date = create_date
+        a.score = score
+        a.save()
+
 
 class PaintingProcess(JSONBaseModel):
     author = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'作者')
@@ -115,29 +124,26 @@ class PaintingProcess(JSONBaseModel):
             a.effort = effort
             a.save()
         else:
-            a = cls.objects.filter(author=author)
+            a = cls.objects.get(author=author)
             a.work_hour += work_hour
+            a.effort += effort
+            a.save()
             if a.work_hour >= 100:
-                cls.create_painting(a.pk)
-            else:
-                a.effort += effort
-                a.save()
+                cls.create_painting(a.pk, author, start_date)
 
     @classmethod
-    def create_painting(cls, painting_process_id):
+    def create_painting(cls, painting_process_id, author, start_date):
         if cls.objects.get(pk=painting_process_id).work_hour < 100:
             raise Exception("painting work hour < 100")
         else:
             a = cls.objects.get(pk=painting_process_id)
             # 作品评分为effort/100
-            score = a.effort / 100
+            score = (a.effort) / 100
             # 出个作品概率为1/100
             if random.randint(1, 100) >= 95:
-                result = score
-            else:
-                result = 0
-        a.delete()
-        return result
+                Painting.painting_success(author, start_date, score)
+            a.delete()
+
 
 class MiningProcess(JSONBaseModel):
     person_id = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'版权所有人')
@@ -152,6 +158,7 @@ class Music(JSONBaseModel):
     create_date = models.DateField(null=True, verbose_name=u'完成时间', blank=True)
     score = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'评分')  # 0 - 100
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
 
 class MusicProcess(JSONBaseModel):
     author = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'作者')
@@ -432,10 +439,9 @@ class PersonDesire(JSONBaseModel):
         if cls.desire_empty(person_id):
             desires = Desire.generate_desire_weight_dict_by_character(person_id)
             cls.insert_desire_data(person_id, desires)
-        else:
-            a = cls.objects.filter(person_id=person_id)
-            for i in a:
-                result.append(i.toJSON())
+        a = cls.objects.filter(person_id=person_id)
+        for i in a:
+            result.append(i.toJSON())
         return result
 
     @classmethod
@@ -583,7 +589,7 @@ class Desire(object):
         origin, target = None, None
         assert desire in Desire.groups
         if desire == "main skill upgrade":
-            origin ,target = 0, 0
+            origin, target = 0, 0
         elif desire == "farming upgrade":
             origin = PersonSkill.get_person_skill_exp(person_id, "farming")
             target = origin + 1000
@@ -613,11 +619,13 @@ class Desire(object):
             target = 1000
         elif desire == "save food":
             origin = InventoryFood.get_inventory_by_person_id_property(person_id, "farming")
-            target += origin
+            target = origin + 1000
         elif desire == "marriage":
-            pass
+            origin = 0
+            target = 500
         elif desire == "have a baby":
-            pass
+            origin = 0
+            target = 500
         if origin == None or target == None:
             raise Exception("origin or target is None")
         else:
@@ -638,7 +646,7 @@ class Action(object):
             main_etm_skill = PersonSkill.get_main_entertainment_skill(person.pk)
             return main_etm_skill + " upgrade"
         elif desire_name in (
-        "farming upgrade", "building upgrade", "mining upgrade", "music upgrade", "painting upgrade"):
+                "farming upgrade", "building upgrade", "mining upgrade", "music upgrade", "painting upgrade"):
             return desire_name
         elif desire_name in ("do house", "do music", "do painting", "do mining"):
             return desire_name

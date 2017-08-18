@@ -152,6 +152,9 @@ class MiningProcess(JSONBaseModel):
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
 
+
+
+
 class Music(JSONBaseModel):
     person_id = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'版权所有人')
     author = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'作者')
@@ -159,6 +162,14 @@ class Music(JSONBaseModel):
     score = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'评分')  # 0 - 100
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
+    @classmethod
+    def music_success(cls, author, create_date, score):
+        a = cls()
+        a.person_id = author
+        a.author = author
+        a.create_date = create_date
+        a.score = score
+        a.save()
 
 class MusicProcess(JSONBaseModel):
     author = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'作者')
@@ -166,6 +177,37 @@ class MusicProcess(JSONBaseModel):
     work_hour = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'创作时长')
     effort = models.IntegerField(default=0, null=False, blank=False)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+    @classmethod
+    def add_effort(cls, author, start_date, work_hour, effort):
+        if not cls.objects.filter(author=author).exists():
+            a = cls()
+            a.author = author
+            a.start_date = start_date
+            a.work_hour = work_hour
+            a.effort = effort
+            a.save()
+        else:
+            a = cls.objects.get(author=author)
+            a.work_hour += work_hour
+            a.effort += effort
+            a.save()
+            if a.work_hour >= 100:
+                cls.create_music(a.pk, author, start_date)
+
+    @classmethod
+    def create_music(cls, music_process_id, author, start_date):
+        if cls.objects.get(pk=music_process_id).work_hour < 100:
+            raise Exception("painting work hour < 100")
+        else:
+            a = cls.objects.get(pk=music_process_id)
+            # 作品评分为effort/100
+            score = (a.effort) / 100
+            # 出个作品概率为1/100
+            if random.randint(1, 100) >= 92:
+                cls.music_success(author, start_date, score)
+            a.delete()
+
 
 
 class InventoryFood(JSONBaseModel):
@@ -638,26 +680,32 @@ class Action(object):
         assert isinstance(person, Person)
         # for desire in desires:
         desire = desires[0]
-        desire_name = desire.get("desire")
-        if desire_name == "main skill upgrade":
+        act = desire.get("desire")
+        if act == "main skill upgrade":
             main_skill = PersonSkill.get_main_skill(person.pk)
-            return main_skill + " upgrade"
-        elif desire_name == "main entertainment skill upgrade":
+            return main_skill + " upgrade", desire
+        elif act == "main entertainment skill upgrade":
             main_etm_skill = PersonSkill.get_main_entertainment_skill(person.pk)
-            return main_etm_skill + " upgrade"
-        elif desire_name in (
+            return main_etm_skill + " upgrade", desire
+        elif act in (
                 "farming upgrade", "building upgrade", "mining upgrade", "music upgrade", "painting upgrade"):
-            return desire_name
-        elif desire_name in ("do house", "do music", "do painting", "do mining"):
-            return desire_name
-        elif desire_name == "save food":
-            return desire_name
+            return act, desire
+        elif act in ("do house", "do music", "do painting", "do mining"):
+            return act, desire
+        elif act == "save food":
+            return act, desire
 
         # todo:
-        elif desire_name == "marriage":
-            return "do house"
-        elif desire_name == "have a baby":
-            return "do house"
+        elif act == "marriage":
+            return "do house", desire
+        elif act == "have a baby":
+            return "do house", desire
         else:
             raise Exception("desire is not good")
-            print desire_name
+            print act, desire
+
+
+
+
+
+

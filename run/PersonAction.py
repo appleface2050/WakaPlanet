@@ -16,7 +16,7 @@ from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
 
 from wkplanet.models import CurrentDate, Person, InventoryFood, DoLog, PersonSkill, PersonDesire, Action, \
-    PaintingProcess
+    PaintingProcess, MusicProcess
 
 
 class PersonAction(object):
@@ -27,6 +27,8 @@ class PersonAction(object):
         if act == "farming":
             return round((1 * skill_exp / 1000.) / 8.0, 3)
         if act == "do painting":
+            return round((1 * skill_exp / 1000.), 3)
+        if act == "do music":
             return round((1 * skill_exp / 1000.), 3)
 
     def cal_skill_exp(self, type="product", skill=""):
@@ -82,7 +84,9 @@ class PersonAction(object):
                                                                                        skill="painting"))
                     PaintingProcess.add_effort(person.pk, act_date, 1, effort)
                 elif act == "do music":
-                    pass
+                    effort = self.cal_production(act, PersonSkill.get_person_skill_exp(person_id=person.pk,
+                                                                                       skill="music"))
+                    MusicProcess.add_effort(person.pk, act_date, 1, effort)
                 elif act == "do building":
                     pass
                 elif act == "do mining":
@@ -120,7 +124,7 @@ class PersonAction(object):
                     # doto：处理有吃的的时候根据desire进行活动
                 desires = PersonDesire.get_desire_by_person_id(person.pk)
                 print "desires: ", desires
-                act = Action.get_person_action_by_desire(person, desires)
+                act, desire = Action.get_person_action_by_desire(person, desires)
                 # act = "farming upgrade"
             else:
                 print "没吃的"

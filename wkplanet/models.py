@@ -151,8 +151,37 @@ class MiningProcess(JSONBaseModel):
     effort = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'1000点出一个ruby')
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
+    # @classmethod
+    # def change_inventory_and_effort(cls, person_id, type):
 
 
+    @classmethod
+    def mining_effort(cls, person_id, type, effort):
+        if cls.objects.filter(person_id=person_id, type=type).exists():
+            a = cls.objects.filter(person_id=person_id, type=type)
+            a.effort += effort
+            a.save()
+        else:
+            a = cls()
+            a.person_id = person_id
+            a.type = type
+            a.effort = effort
+            a.save()
+
+        a = cls.objects.get(person_id=person_id, type=type)
+        if a.effort >= 1000:
+            try:
+                with transaction.atomic():
+                    PropertyInventory.change_inventory(a.person_id, a.type, 1)
+                    a.effort = 0
+                    a.save()
+            except Exception, e:
+                print e
+                print "MiningProcess.mining_effort error"
+                transaction.rollback()
+            else:
+                transaction.commit()
+        return True
 
 
 class Music(JSONBaseModel):
@@ -170,6 +199,7 @@ class Music(JSONBaseModel):
         a.create_date = create_date
         a.score = score
         a.save()
+
 
 class MusicProcess(JSONBaseModel):
     author = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'作者')
@@ -207,7 +237,6 @@ class MusicProcess(JSONBaseModel):
             if random.randint(1, 100) >= 92:
                 cls.music_success(author, start_date, score)
             a.delete()
-
 
 
 class InventoryFood(JSONBaseModel):
@@ -267,6 +296,12 @@ class PropertyInventory(JSONBaseModel):
     property = models.CharField(default="", max_length=128, unique=False, null=False, blank=False)
     inventory = models.FloatField(default=0.0, null=False, blank=False)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+    @classmethod
+    def change_inventory(cls, person_id, property, inventory_delta):
+        a = cls.objects.get(person_id=person_id, property=property)
+        a.inventory += inventory_delta
+        a.save()
 
 
 class RealEstate(JSONBaseModel):
@@ -375,17 +410,18 @@ class Person(JSONBaseModel):
     def create_a_origin_person(cls):
         p = cls()
         name_dict = name_generator()
+        print name_dict
         p.first_name = name_dict.get("name")
         p.last_name = name_dict.get("surname")
         p.gender = name_dict.get("gender")
         p.date_of_birth = CurrentDate.get_current_date() - datetime.timedelta(
             days=random.randint(365 * 18, 365 * 28))  # 初始年龄 18-28 之间
         p.join_date = CurrentDate.get_current_date()
+
         try:
             with transaction.atomic():
                 p.save()
                 PersonCharacter.create_new_person_character(p.pk)
-                print name_dict
                 desires = Desire.generate_desire_weight_dict_by_character(p.pk)
                 PersonDesire.insert_desire_data(p.pk, desires)
         except Exception, e:
@@ -441,7 +477,7 @@ class PersonCharacter(JSONBaseModel):
         result = cache.get("get_person_character_by_person_id@%s" % str(person_id))
         if not result:
             result = []
-            if not cls.objects.filter(pk=person_id).exists():
+            if not cls.objects.filter(person_id=person_id).exists():
                 raise Exception("person character not exist")
             else:
                 data = cls.objects.filter(person_id=person_id)
@@ -630,7 +666,10 @@ class Desire(object):
     def cal_desire_origin_target(self, person_id, desire):
         origin, target = None, None
         assert desire in Desire.groups
+
         if desire == "main skill upgrade":
+            origin, target = 0, 0
+        elif desire == "main entertainment skill upgrade":
             origin, target = 0, 0
         elif desire == "farming upgrade":
             origin = PersonSkill.get_person_skill_exp(person_id, "farming")
@@ -703,9 +742,3 @@ class Action(object):
         else:
             raise Exception("desire is not good")
             print act, desire
-
-
-
-
-
-

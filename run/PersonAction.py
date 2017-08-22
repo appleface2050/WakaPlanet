@@ -16,19 +16,21 @@ from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
 
 from wkplanet.models import CurrentDate, Person, InventoryFood, DoLog, PersonSkill, PersonDesire, Action, \
-    PaintingProcess, MusicProcess
+    PaintingProcess, MusicProcess, MiningProcess
 
 
 class PersonAction(object):
     def __init__(self):
         self.AVAILABLE_HOUR = 16
 
-    def cal_production(self, act, skill_exp):
+    def cal_production_or_effort(self, act, skill_exp):
         if act == "farming":
             return round((1 * skill_exp / 1000.) / 8.0, 3)
         if act == "do painting":
             return round((1 * skill_exp / 1000.), 3)
         if act == "do music":
+            return round((1 * skill_exp / 1000.), 3)
+        if act == "do mining":
             return round((1 * skill_exp / 1000.), 3)
 
     def cal_skill_exp(self, type="product", skill=""):
@@ -66,7 +68,7 @@ class PersonAction(object):
                 if act is None:
                     raise Exception("act is none")
                 if act == "farming":
-                    number = self.cal_production(act, PersonSkill.get_person_skill_exp(person_id=person.pk, skill=act))
+                    number = self.cal_production_or_effort(act, PersonSkill.get_person_skill_exp(person_id=person.pk, skill=act))
                     InventoryFood.do_add_food_by_farming(person.pk, act, number)  # 增加产出
                     PersonSkill.add_person_skill_exp(person.pk, act, self.cal_skill_exp())  # 增加经验
                 elif act == "farming upgrade":
@@ -80,17 +82,19 @@ class PersonAction(object):
                 elif act == "mining upgrade":
                     PersonSkill.add_person_skill_exp(person.pk, "mining", self.cal_skill_exp(type="self_learn"))
                 elif act == "do painting":
-                    effort = self.cal_production(act, PersonSkill.get_person_skill_exp(person_id=person.pk,
-                                                                                       skill="painting"))
+                    effort = self.cal_production_or_effort(act, PersonSkill.get_person_skill_exp(person_id=person.pk,
+                                                                                                 skill="painting"))
                     PaintingProcess.add_effort(person.pk, act_date, 1, effort)
                 elif act == "do music":
-                    effort = self.cal_production(act, PersonSkill.get_person_skill_exp(person_id=person.pk,
-                                                                                       skill="music"))
+                    effort = self.cal_production_or_effort(act, PersonSkill.get_person_skill_exp(person_id=person.pk,
+                                                                                                 skill="music"))
                     MusicProcess.add_effort(person.pk, act_date, 1, effort)
                 elif act == "do building":
                     pass
                 elif act == "do mining":
-                    pass
+                    effort = self.cal_production_or_effort(act, PersonSkill.get_person_skill_exp(person_id=person.pk,
+                                                                                                 skill="mining"))
+                    MiningProcess.mining_effort(person.pk, "ruby", effort)
                 # elif act == "do house":
                 #     pass
                 else:

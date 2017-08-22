@@ -121,11 +121,6 @@ class PersonAction(object):
         print person.first_name, " ", person.last_name, date
         for hour in range(1, self.AVAILABLE_HOUR + 1):
             print "hour:", hour
-            # if not p_cache.get("check_if_have_food_for_one_day", False) and not InventoryFood.check_if_have_food_for_one_day(person.pk):
-            # food_enough =
-            # if food_enough:
-            #     p_cache["check_if_have_food_for_one_day"] = True
-
             if p_cache.get("check_if_have_food_for_one_day", False) or InventoryFood.check_if_have_food_for_one_day(
                     person.pk):
                 if not p_cache.get("check_if_have_food_for_one_day", False):

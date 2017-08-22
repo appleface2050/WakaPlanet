@@ -530,6 +530,10 @@ class PersonDesire(JSONBaseModel):
     target = models.FloatField(default=0.0, null=False, blank=False)
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
 
+    # @classmethod
+    # def delete_desire_done(cls, person_id):
+    #     if
+
     @classmethod
     def delete_desire(cls, person_id, desire):
         a = cls.objects.get(person_id=person_id, desire=desire)
@@ -538,6 +542,7 @@ class PersonDesire(JSONBaseModel):
     @classmethod
     def get_desire_by_person_id(cls, person_id):
         result = []
+        # cls.delete_desire_done(person_id)
         if cls.desire_empty(person_id):
             desires = Desire.generate_desire_weight_dict_by_character(person_id)
             cls.insert_desire_data(person_id, desires)

@@ -305,10 +305,28 @@ class PropertyInventory(JSONBaseModel):
 
 
 class RealEstate(JSONBaseModel):
-    work_hours = models.IntegerField(default=0, null=False, blank=False)
+    work_hours = models.IntegerField(default=1000, null=False, blank=False)
     person_id = models.IntegerField(default=0, null=False, blank=False, verbose_name=u'所属人')
     in_use = models.BooleanField(default=False)  # 一个人最多只有一个房子在使用
     uptime = models.DateTimeField(auto_now=True, verbose_name=u'数据更新时间')
+
+    @classmethod
+    def get_working_realestats(cls, person_id):
+        if not cls.objects.filter(person_id=person_id).exists():
+            a = cls()
+            a.person_id = person_id
+            a.in_use = True
+            a.save()
+            return a.pk
+        if cls.objects.filter(person_id=person_id, in_use=True).exists():
+            a = cls.objects.get(person_id=person_id,in_use=True)
+            return a.pk
+        else:
+            a = cls.objects.filter(person_id=person_id)[0]
+            a.in_use = True
+            a.save()
+            return a.pk
+
 
     @classmethod
     def get_work_hours_by_belong(cls, person_id):
@@ -321,6 +339,12 @@ class RealEstate(JSONBaseModel):
             a = cls.objects.filter(person_id=person_id).order_by("-work_hours")[0]
             return a.work_hours
 
+    @classmethod
+    def add_effort(cls, person_id, effort):
+        id = cls.get_working_realestats(person_id)
+        a = cls.objects.get(pk=id)
+        a.work_hours += effort
+        a.save()
 
 class PersonSkill(JSONBaseModel):
     person_id = models.IntegerField(default=0, null=False, blank=False)

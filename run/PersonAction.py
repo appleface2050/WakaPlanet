@@ -16,7 +16,7 @@ from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
 
 from wkplanet.models import CurrentDate, Person, InventoryFood, DoLog, PersonSkill, PersonDesire, Action, \
-    PaintingProcess, MusicProcess, MiningProcess
+    PaintingProcess, MusicProcess, MiningProcess, RealEstate
 
 
 class PersonAction(object):
@@ -26,11 +26,13 @@ class PersonAction(object):
     def cal_production_or_effort(self, act, skill_exp):
         if act == "farming":
             return round((1 * skill_exp / 1000.) / 8.0, 3)
-        if act == "do painting":
+        elif act == "do painting":
             return round((1 * skill_exp / 1000.), 3)
-        if act == "do music":
+        elif act == "do music":
             return round((1 * skill_exp / 1000.), 3)
-        if act == "do mining":
+        elif act == "do mining":
+            return round((1 * skill_exp / 1000.), 3)
+        elif act == "do house":
             return round((1 * skill_exp / 1000.), 3)
 
     def cal_skill_exp(self, type="product", skill=""):
@@ -85,18 +87,22 @@ class PersonAction(object):
                     effort = self.cal_production_or_effort(act, PersonSkill.get_person_skill_exp(person_id=person.pk,
                                                                                                  skill="painting"))
                     PaintingProcess.add_effort(person.pk, act_date, 1, effort)
+                    PersonSkill.add_person_skill_exp(person.pk, "painting", self.cal_skill_exp())
                 elif act == "do music":
                     effort = self.cal_production_or_effort(act, PersonSkill.get_person_skill_exp(person_id=person.pk,
                                                                                                  skill="music"))
                     MusicProcess.add_effort(person.pk, act_date, 1, effort)
-                elif act == "do building":
-                    pass
+                    PersonSkill.add_person_skill_exp(person.pk, "music", self.cal_skill_exp())
+                elif act == "do house":
+                    effort = self.cal_production_or_effort(act, PersonSkill.get_person_skill_exp(person_id=person.pk,
+                                                                                                 skill="building"))
+                    RealEstate.add_effort(person.pk, effort)
+                    PersonSkill.add_person_skill_exp(person.pk, "building", self.cal_skill_exp())
                 elif act == "do mining":
                     effort = self.cal_production_or_effort(act, PersonSkill.get_person_skill_exp(person_id=person.pk,
                                                                                                  skill="mining"))
                     MiningProcess.mining_effort(person.pk, "ruby", effort)
-                # elif act == "do house":
-                #     pass
+                    PersonSkill.add_person_skill_exp(person.pk, "mining", self.cal_skill_exp())
                 else:
                     print act
                 DoLog.insert_a_data(person.pk, act, result, act_date, act_hour)

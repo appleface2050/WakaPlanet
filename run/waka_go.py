@@ -3,6 +3,8 @@ import datetime
 import sys
 import os
 
+
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 sys.path.append(BASE_DIR)
@@ -14,7 +16,7 @@ from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
 
 from wkplanet.models import CurrentDate, Person
-
+from run.PersonAction import PersonAction
 
 class Process(object):
     def waka(self):
@@ -24,9 +26,9 @@ class Process(object):
         print today
         # Person.create_a_origin_person()
 
-
-
-        # CurrentDate.set_next_day()
+        a = PersonAction()
+        a.all_person_one_day_action(today)
+        CurrentDate.set_next_day()
         print datetime.datetime.now() - now
 
 
